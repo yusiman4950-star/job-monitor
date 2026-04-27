@@ -29,10 +29,10 @@ jobs:
         uses: nanasess/setup-chromedriver@v2
 
       - name: Install dependencies
-        run: pip install -r requirements2.txt
+        run: pip install selenium webdriver-manager
 
       - name: Run scraper
-        run: python scraper6.py
+        run: python scraper7.py
         env:
           EMAIL_SENDER: ${{ secrets.EMAIL_SENDER }}
           EMAIL_PASSWORD: ${{ secrets.EMAIL_PASSWORD }}
