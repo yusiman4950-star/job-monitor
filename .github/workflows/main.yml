@@ -32,7 +32,7 @@ jobs:
         run: pip install -r requirements2.txt
 
       - name: Run scraper
-        run: python scraper4.py
+        run: python scraper6.py
         env:
           EMAIL_SENDER: ${{ secrets.EMAIL_SENDER }}
           EMAIL_PASSWORD: ${{ secrets.EMAIL_PASSWORD }}
