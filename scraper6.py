@@ -34,6 +34,7 @@ def fetch_jobs():
                 session.cookies.set(name, value)
         response = session.get(url, params=params)
         response.raise_for_status()
+        print(response.text[:500])
         json_data = response.json()
         # 解析职位数据
         requisition_list = json_data.get('requisitionList', [])
