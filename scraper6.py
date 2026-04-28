@@ -1,66 +1,82 @@
 import requests
-import smtplib
 import os
+import smtplib
 from email.message import EmailMessage
 
-# ====== 你只需要修改这一行 ======
-API_URL = "https://jpmorganchase.sc.omtrdc.net/b/ss/jpmcglobalnew/1/JS-2.26.0-LGPQ/s57577293672625?AQB=1&ndh=1&pf=1&t=28%2F3%2F2026%201%3A11%3A26%202%20-480&mid=12175353856609444342759862860814361906&aamlh=3&ce=UTF-8&cdp=3&pageName=Programs%20%7C%20JPMorganChase&g=https%3A%2F%2Fwww.jpmorganchase.com%2Fcareers%2Fexplore-opportunities%2Fprograms&cc=USD&server=Launch&events=event6&v7=Asia%20Pacific&c14=D%3Dv7&v22=Checkbox&v23=Hong%20Kong%20SAR%2C%20China&v25=Careers%20Feed%20Component&v28=Hong%20Kong%20SAR%2C%20China%20%7C%20Asia%20Pacific&c33=Global%20%3E%20Programs%20%7C%20JPMorganChase&c44=Global&v44=Global&v51=Global%20%3E%20Programs%20%7C%20JPMorganChase&c58=https%3A%2F%2Fwww.jpmorganchase.com%2Fcareers%2Fexplore-opportunities%2Fprograms&v58=https%3A%2F%2Fwww.jpmorganchase.com%2Fcareers%2Fexplore-opportunities%2Fprograms&v79=Careers&v82=https%3A%2F%2Fwww.jpmorganchase.com%2Fcareers%2Fexplore-opportunities%2Fprograms&v83=https%3A%2F%2Fwww.jpmorganchase.com%2Fcareers%2Fexplore-opportunities%2Fprograms%2Fmarkets-fulltime-analyst&v84=Exploring%20opportunities&pe=lnk_o&pev2=Hong%20Kong%20SAR%2C%20China%20%7C%20Asia%20Pacific&s=2560x1440&c=24&j=1.6&v=N&k=Y&bw=976&bh=1207&mcorgid=BDA71C8B5330AE0C0A490D4D%40AdobeOrg&lrt=155&AQE=1"
-# ===============================
+# 从你提供的cURL命令中提取的API请求参数
+url = "https://jpmc.fa.oraclecloud.com/hcmRestApi/resources/latest/recruitingCEJobRequisitions"
+params = {
+    "onlyData": "true",
+    "expand": "requisitionList.workLocation,requisitionList.otherWorkLocations,requisitionList.secondaryLocations,flexFieldsFacet.values,requisitionList.requisitionFlexFields",
+    "finder": "findReqs;siteNumber=CX_1001,facetsList=LOCATIONS%3BWORK_LOCATIONS%3BWORKPLACE_TYPES%3BTITLES%3BCATEGORIES%3BORGANIZATIONS%3BPOSTING_DATES%3BFLEX_FIELDS,limit=25,keyword=%22Analyst%22,locationId=300000000289330,sortBy=RELEVANCY"
+}
+headers = {
+    'Accept': '*/*',
+    'Accept-Language': 'en',
+    'Content-Type': 'application/vnd.oracle.adf.resourceitem+json;charset=utf-8',
+    'Ora-Irc-Language': 'en',
+    'Referer': 'https://jpmc.fa.oraclecloud.com/hcmUI/CandidateExperience/en/sites/CX_1001/jobs?keyword=Analyst&location=Hong+Kong&locationId=300000000289330&locationLevel=country&mode=location',
+    'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/146.0.0.0 Safari/537.36',
+}
+# 这个方法就是让你替换那个关键的Cookie
+def get_cookie_string():
+    # 复制你cURL命令里 -b 后面的整段内容，替换这里的字符串
+    return 'ORA_FUSION_PREFS=v1.0~bG9jYWxlPWVufmRlZmF1bHRMYW5ndWFnZU1hcmtlcj10cnVl; ORA_FND_SESSION_US2GL1EC_F=DEFAULT_PILLAR:STRetx6XYG7bdT+uoRRgC9hg3VmFALowrIUDuliPCoJF6WYlROZJJMNE9zudUsf+:1777309525721; CX_1001_cookieConsentEnabled=true; ORA_CX_SITE_NUMBER=CX_1001'
 
 def fetch_jobs():
-    headers = {
-        "User-Agent": "Mozilla/5.0",
-        "Accept": "application/json"
-    }
     try:
-        resp = requests.get(API_URL, headers=headers, timeout=15)
-        resp.raise_for_status()
-        data = resp.json()
-        
+        session = requests.Session()
+        session.headers.update(headers)
+        # 从 get_cookie_string 解析 Cookie
+        for cookie_pair in get_cookie_string().split('; '):
+            if '=' in cookie_pair:
+                name, value = cookie_pair.split('=', 1)
+                session.cookies.set(name, value)
+        response = session.get(url, params=params)
+        response.raise_for_status()
+        json_data = response.json()
+        # 解析职位数据
+        requisition_list = json_data.get('requisitionList', [])
         jobs = []
-        # 根据实际返回的JSON结构提取职位（可能需要微调）
-        # 假设返回的列表在 data['jobs'] 或 data['results'] 中
-        job_list = data.get('jobs') or data.get('results') or data.get('data', [])
-        for item in job_list:
-            title = item.get('title') or item.get('jobTitle') or '未知职位'
-            location = item.get('location') or item.get('city') or ''
-            link = item.get('url') or item.get('applyUrl') or '#'
-            if 'hong kong' in location.lower() or 'hong kong' in title.lower():
-                jobs.append(f"职位: {title}\n地点: {location}\n链接: {link}\n")
+        for req in requisition_list:
+            title = req.get('Title', 'N/A')
+            location = req.get('PrimaryLocation', 'N/A')
+            job_id = req.get('Id', 'N/A')
+            job_url = f"https://jpmc.fa.oraclecloud.com/hcmUI/CandidateExperience/en/sites/CX_1001/job/{job_id}"
+            jobs.append(f"职位: {title}\n地点: {location}\n链接: {job_url}\n")
         return jobs
     except Exception as e:
         print(f"抓取失败: {e}")
         return None
 
-def send_email(jobs, sender, pwd, receiver):
+def send_mail(jobs):
+    sender = os.environ.get("EMAIL_SENDER")
+    password = os.environ.get("EMAIL_PASSWORD")
+    receiver = os.environ.get("EMAIL_RECEIVER")
     if not jobs:
-        print("没有香港岗位，不发送邮件")
+        print("未发现新岗位，不发送邮件。")
         return
-    content = f"发现 {len(jobs)} 个摩根大通香港岗位：\n\n" + "\n\n".join(jobs)
+    content = f"发现 {len(jobs)} 个摩根大通香港Analyst岗位：\n\n" + "\n\n".join(jobs)
     msg = EmailMessage()
     msg.set_content(content)
-    msg["Subject"] = "摩根大通香港岗位日报"
+    msg["Subject"] = "摩根大通香港Analyst岗位日报"
     msg["From"] = sender
     msg["To"] = receiver
     try:
         with smtplib.SMTP("smtp.gmail.com", 587) as smtp:
             smtp.starttls()
-            smtp.login(sender, pwd)
+            smtp.login(sender, password)
             smtp.send_message(msg)
         print("邮件发送成功")
     except Exception as e:
-        print(f"邮件失败: {e}")
+        print(f"邮件发送失败: {e}")
 
 def main():
-    sender = os.environ.get("EMAIL_SENDER")
-    pwd = os.environ.get("EMAIL_PASSWORD")
-    receiver = os.environ.get("EMAIL_RECEIVER")
-    if not all([sender, pwd, receiver]):
-        print("请配置邮箱密钥")
-        return
     jobs = fetch_jobs()
     if jobs is not None:
-        send_email(jobs, sender, pwd, receiver)
+        send_mail(jobs)
+    else:
+        print("未获取到岗位数据。")
 
 if __name__ == "__main__":
     main()
