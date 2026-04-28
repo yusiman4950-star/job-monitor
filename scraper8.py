@@ -3,7 +3,6 @@ import os
 import smtplib
 import json
 from email.mime.text import MIMEText
-from email.mime.multipart import MIMEMultipart
 
 # ========================= 配置区域 =========================
 COOKIE_STRING = 'ORA_FUSION_PREFS=v1.0~bG9jYWxlPWVufmRlZmF1bHRMYW5ndWFnZU1hcmtlcj10cnVl; ORA_FND_SESSION_US2GL1EC_F=DEFAULT_PILLAR:STRetx6XYG7bdT+uoRRgC9hg3VmFALowrIUDuliPCoJF6WYlROZJJMNE9zudUsf+:1777309525721; CX_1001_cookieConsentEnabled=true; ORA_CX_SITE_NUMBER=CX_1001; CX_1001_cookieAccept_functional=true; ORA_CX_USERID_FUNCTIONAL=0c20ffd5-845f-4e22-8e8e-166b0f32cfaa; CX_1001_cookieAccept_analytical=true; ORA_CX_USERID=0c20ffd5-845f-4e22-8e8e-166b0f32cfaa; ORA_FPC=id=b0e3653d-d448-48c8-9e43-fc85caca6447'
@@ -24,6 +23,16 @@ PARAMS = {
     "finder": "findReqs;siteNumber=CX_1001,limit=100,locationId=300000000289330,sortBy=RELEVANCY"
 }
 # ============================================================
+
+def clean_string(s):
+    """移除字符串中的 \\xa0 和其他不可见空白字符"""
+    if not s:
+        return s
+    # 替换不间断空格为普通空格，然后strip
+    s = s.replace('\xa0', ' ').strip()
+    # 移除所有 ASCII 控制字符（除了换行和制表符）
+    s = ''.join(ch for ch in s if ch.isprintable() or ch in '\n\t\r')
+    return s
 
 def fetch_jobs():
     session = requests.Session()
@@ -55,11 +64,10 @@ def fetch_jobs():
                 job_url = f"https://jpmc.fa.oraclecloud.com/hcmUI/CandidateExperience/en/sites/CX_1001/job/{job_id}"
             else:
                 job_url = '#'
-            # 清理可能存在的非法字符，替换 \xa0 为普通空格
-            title = title.replace('\xa0', ' ')
-            location = location.replace('\xa0', ' ')
+            # 清理字符串中的特殊字符
+            title = clean_string(title)
+            location = clean_string(location)
             jobs.append(f"职位: {title}\n地点: {location}\n链接: {job_url}\n")
-        # 打印前两条职位预览（调试用）
         if jobs:
             print("前两个职位示例:")
             for j in jobs[:2]:
@@ -72,13 +80,16 @@ def fetch_jobs():
         return None
 
 def send_email(jobs, sender, password, receiver):
+    # 清理邮箱凭证中的不可见字符（关键修复）
+    sender = clean_string(sender)
+    password = clean_string(password)
+    receiver = clean_string(receiver)
+    
     if not jobs:
         print("未发现任何岗位，不发送邮件。")
         return
-    # 构造邮件内容
     subject = "摩根大通香港岗位日报 (无关键词限制)"
     content = f"发现 {len(jobs)} 个摩根大通香港地区岗位：\n\n" + "\n\n".join(jobs)
-    # 使用 MIMEText 明确指定 UTF-8 编码
     msg = MIMEText(content, 'plain', 'utf-8')
     msg['Subject'] = subject
     msg['From'] = sender
@@ -87,12 +98,11 @@ def send_email(jobs, sender, password, receiver):
     try:
         with smtplib.SMTP("smtp.gmail.com", 587) as smtp:
             smtp.starttls()
-            smtp.login(sender, password)
+            smtp.login(sender, password)   # 现在 sender 和 password 应该是干净的
             smtp.send_message(msg)
         print("邮件发送成功")
     except Exception as e:
         print(f"邮件发送失败: {e}")
-        # 打印详细错误
         import traceback
         traceback.print_exc()
 
