@@ -2,6 +2,7 @@ import requests
 import os
 import smtplib
 from email.message import EmailMessage
+import json
 
 # 从你提供的cURL命令中提取的API请求参数
 url = "https://jpmc.fa.oraclecloud.com/hcmRestApi/resources/latest/recruitingCEJobRequisitions"
@@ -34,18 +35,11 @@ def fetch_jobs():
                 session.cookies.set(name, value)
         response = session.get(url, params=params)
         response.raise_for_status()
-        print(response.text[:500])
         json_data = response.json()
-        # 解析职位数据
-        requisition_list = json_data.get('requisitionList', [])
-        jobs = []
-        for req in requisition_list:
-            title = req.get('Title', 'N/A')
-            location = req.get('PrimaryLocation', 'N/A')
-            job_id = req.get('Id', 'N/A')
-            job_url = f"https://jpmc.fa.oraclecloud.com/hcmUI/CandidateExperience/en/sites/CX_1001/job/{job_id}"
-            jobs.append(f"职位: {title}\n地点: {location}\n链接: {job_url}\n")
-        return jobs
+        print("顶层键:", list(json_data.keys()))
+        print("完整JSON前2000字符:", json.dumps(json_data, indent=2)[:2000])
+        # json_data = response.json()
+        return []
     except Exception as e:
         print(f"抓取失败: {e}")
         return None
