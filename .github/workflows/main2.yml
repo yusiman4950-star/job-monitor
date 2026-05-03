@@ -1,4 +1,4 @@
-name: daily-job-check
+name: Multi-Bank Job Check
 
 on:
   schedule:
@@ -16,8 +16,20 @@ jobs:
         with:
           python-version: '3.11'
 
-      - name: Install dependencies
-        run: pip install -r requirements.txt
+      - name: Install Chrome
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y wget gnupg
+          wget -q -O - https://dl-ssl.google.com/linux/linux_signing_key.pub | sudo apt-key add -
+          echo "deb [arch=amd64] http://dl.google.com/linux/chrome/deb/ stable main" | sudo tee /etc/apt/sources.list.d/google-chrome.list
+          sudo apt-get update
+          sudo apt-get install -y google-chrome-stable
+
+      - name: Install ChromeDriver
+        uses: nanasess/setup-chromedriver@v2
+
+      - name: Install Python dependencies
+        run: pip install requests beautifulsoup4 selenium webdriver-manager
 
       - name: Run multi-bank scraper
         run: python scraper_all_banks.py
