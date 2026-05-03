@@ -1,3 +1,4 @@
+#这个版本已经可以跑了，但是会把所有hk的opening都发过来，每个role只有名字地区和链接
 import requests
 import os
 import smtplib
