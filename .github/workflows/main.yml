@@ -32,7 +32,7 @@ jobs:
         run: pip install selenium webdriver-manager
 
       - name: Run scraper
-        run: python scraper8.py
+        run: python scraper9.py
         env:
           EMAIL_SENDER: ${{ secrets.EMAIL_SENDER }}
           EMAIL_PASSWORD: ${{ secrets.EMAIL_PASSWORD }}
